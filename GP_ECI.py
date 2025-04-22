@@ -13,6 +13,10 @@ from botorch.models import ModelListGP
 import argparse
 import pickle
 import numpy as np
+
+from mit_perception.scripts.inference_functional import run_diffusion_policy
+
+
 """
 Implements system agent. This is used as a baseline for ground truth, i.e., the best-case performance. 
 The true reward is provided. 
@@ -24,6 +28,7 @@ def unnormalize(X):
 def get_user_feedback(X,dim,seed,dataset_path,ckpt_path):
     theta0=45
 
+    run_diffusion_policy(231,270,45)
     # score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
 
     n_modes = 3
