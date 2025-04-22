@@ -22,18 +22,21 @@ Implements system agent. This is used as a baseline for ground truth, i.e., the 
 The true reward is provided. 
 """
 def unnormalize(X):
-    return np.array([X[0]*350+150,X[1]*450]) # Unnormalize [0,1]X[0,1] to [100,400]X[100,400]
+    return (X[0]*350+150,X[1]*450) # Unnormalize [0,1]X[0,1] to [100,400]X[100,400]
 
 
 def get_user_feedback(X,dim,seed,dataset_path,ckpt_path):
     theta0=45
+    x0, y0 = unnormalize(X)
 
-    run_diffusion_policy(231,270,45)
+    record_dict = run_diffusion_policy(x0, y0, theta0, dataset_path, seed, max_steps=40)
+    # print(record_dict['obs_list'][20])
+
     # score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
 
     n_modes = 3
     while True:
-        input_str = input(f"please enter failure mode costs: ")
+        input_str = input(f"please enter failure mode costs ^-^ : ")
         score_human = input_str.split(',')
         if len(score_human) != 3:
             print(f"please enter exactly {n_modes} comma-separated values >_<")
@@ -41,18 +44,20 @@ def get_user_feedback(X,dim,seed,dataset_path,ckpt_path):
             break
     score_human = [float(x) for x in score_human]
 
-    return tuple(score_human)
+    return tuple(score_human), record_dict
 
 def system_agent(X,dim,seed,dataset_path,ckpt_path):
-    score = get_user_feedback(X,dim,seed,dataset_path,ckpt_path)
+    (score1,score2,score3),record_dict = get_user_feedback(X,dim,seed,dataset_path,ckpt_path)
     # if score<0.7:
     #     return torch.tensor(1)
     # else:
     #     return torch.tensor(1-score)
-    return torch.tensor(score)
+    # return torch.tensor(score1),torch.tensor(score2),torch.tensor(score3)
+    return score1,score2,score3,record_dict
 
 def fail_bo(num_iter,bounds,X,Y,constraints,dataset_path,ckpt_path,dim,punchout_radius=0.1):
     id_ =0 
+    record_dicts = []
     while id_ < num_iter:
         # We don't have to normalize X since the domain is [0, 1]^2. Make sure to
         # appropriately adjust the punchout radius if the domain is normalized.
@@ -76,28 +81,32 @@ def fail_bo(num_iter,bounds,X,Y,constraints,dataset_path,ckpt_path,dim,punchout_
         next_X = next_X[0]
         print("Iteration:",id_,"Datapoint selected:",next_X)
 
-        next_y1,next_y2,next_y3= system_agent(next_X.squeeze(),dim,seed,dataset_path,ckpt_path)
+        next_y1,next_y2,next_y3,record_dict= system_agent(next_X.squeeze(),dim,seed,dataset_path,ckpt_path)
         next_y = torch.tensor([next_y1,next_y2,next_y3]).reshape(1,2)
         X = torch.cat((X, next_X.reshape(1,-1)))
         Y = torch.cat((Y, next_y))
-        
+        record_dicts.append(record_dict)
         id_+=1
-        data = {'X':X, 'y_data':Y}
+        lambda_=0.0
+        data = {'X':X, 'y_data':Y, 'record_dicts': record_dicts}
         print("Length of Y:",len(Y))
-        file = open(f"/experiment_logs_ECI/seed_{seed}.pkl", "wb")
+        file = open(f"/experiment_logs_ECI/seed_{seed}_{lambda_}.pkl", "wb")
         pickle.dump(data,file )
         file.close()
+
     return X,y_data, gp_models
 
 def get_initial(num_init,seed,dataset_path,ckpt_path,dim):
     X = np.random.rand(num_init,dim)
     Y = torch.zeros((1,3))
+    record_dicts = []
     for x in X:
-        next_y1,next_y2,next_y3= system_agent(x.squeeze(),dim,seed,dataset_path,ckpt_path)
+        next_y1,next_y2,next_y3,record_dict= system_agent(x.squeeze(),dim,seed,dataset_path,ckpt_path)
         next_y = torch.tensor([next_y1,next_y2,next_y3]).reshape(1,3)
         Y = torch.cat((Y, next_y))   
+        record_dicts.append(record_dict)
         # model_gpr, mll = init_and_fit_gpr(torch.tensor(X_collect).double(), torch.tensor(np.array(y_data)).double().reshape(-1,1))
-        data = {'X':X, 'y_data':Y[1:,:]}
+        data = {'X':X, 'y_data':Y[1:,:], 'record_dicts': record_dicts}
         file = open(f"GP_BO_init_{seed}.pkl", "wb")
         pickle.dump(data,file )
         file.close()
@@ -106,11 +115,11 @@ if __name__ == "__main__":
     # seed_list = [3000,5000,10000,15000,20000,25000,30000,35000,40000,45000]
     acf = "ECI"
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_init", type=int, default=10)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--num_iter", type=int, default=10)
-    parser.add_argument("--delta", type=float, default=0)
-    parser.add_argument("--radius", type=float, default=.1)
+    parser.add_argument("--num_init", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=3000)
+    parser.add_argument("--num_iter", type=int, default=1)
+    parser.add_argument("--delta", type=float, default=0.05)
+    parser.add_argument("--radius", type=float, default=0.05)
 
     args = vars(parser.parse_args())
     num_init = args['num_init']
@@ -128,7 +137,7 @@ if __name__ == "__main__":
         get_initial(num_init,seed,dataset_path0,ckpt_path0,dim=2)
     else:
         #open the random data file
-        with open(f"GP_BO_init_{3000}.pkl", 'rb') as f:
+        with open(f"GP_BO_init_{seed}.pkl", 'rb') as f:
             data_initial = pickle.load(f)
         
         #Load initial data

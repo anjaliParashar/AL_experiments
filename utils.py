@@ -152,18 +152,18 @@ class ExpectedCoverageImprovement(MCAcquisitionFunction):
     @t_batch_mode_transform(expected_q=1)
     def forward(self, X):
         """Evaluate Expected Improvement on the candidate set X."""
-        # lambda_ = 0.2
+        lambda_ = 1.0
         ball_around_X = self.ball_of_points + X
         domain_mask = smooth_box_mask(
             ball_around_X, self.bounds[0, :], self.bounds[1, :]
         ).prod(dim=-1)
         num_points_in_integral = domain_mask.sum(dim=-1)
         base_point_mask1 = self._get_base_point_mask_metric(ball_around_X).prod(dim=-1)#.to(device='cuda')
-        # base_point_mask2 = self._get_base_point_mask(ball_around_X).prod(dim=-1)
+        base_point_mask2 = self._get_base_point_mask(ball_around_X).prod(dim=-1)
         prob = self._estimate_probabilities_of_satisfaction_at_points(ball_around_X)
         # masked_prob = prob*domain_mask*base_point_mask2
-        masked_prob = prob*domain_mask*base_point_mask1
-        # masked_prob = prob * domain_mask * ((1-lambda_)*base_point_mask1+lambda_*base_point_mask2)
+        # masked_prob = prob*domain_mask*base_point_mask1
+        masked_prob = prob * domain_mask * ((1-lambda_)*base_point_mask1+lambda_*base_point_mask2)
         y = masked_prob.sum(dim=-1) / num_points_in_integral
         return y
 
