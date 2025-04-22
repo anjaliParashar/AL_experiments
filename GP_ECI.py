@@ -6,7 +6,7 @@ root_dir = path.abspath(path.join(__file__ ,"../../.."))
 home_dir = path.abspath(path.join(__file__ ,"../../../../.."))
 sys.path.append(path.abspath(path.join(__file__ ,"../../..")))
 sys.path.append(path.abspath(path.join(__file__ ,"../../../..")))
-from utils import ExpectedCoverageImprovement, get_and_fit_gp, identify_samples_which_satisfy_constraints
+from utils import ExpectedCoverageImprovement, get_and_fit_gp#, identify_samples_which_satisfy_constraints
 import torch
 from botorch.optim import optimize_acqf
 from botorch.models import ModelListGP
@@ -23,8 +23,20 @@ def unnormalize(X):
 
 def get_user_feedback(X,dim,seed,dataset_path,ckpt_path):
     theta0=45
-    score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
-    return score_human
+
+    # score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
+
+    n_modes = 3
+    while True:
+        input_str = input(f"please enter failure mode costs: ")
+        score_human = input_str.split(',')
+        if len(score_human) != 3:
+            print(f"please enter exactly {n_modes} comma-separated values >_<")
+        else:
+            break
+    score_human = [float(x) for x in score_human]
+
+    return tuple(score_human)
 
 def system_agent(X,dim,seed,dataset_path,ckpt_path):
     score = get_user_feedback(X,dim,seed,dataset_path,ckpt_path)
@@ -89,11 +101,11 @@ if __name__ == "__main__":
     # seed_list = [3000,5000,10000,15000,20000,25000,30000,35000,40000,45000]
     acf = "ECI"
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_init", type=int)
-    parser.add_argument("--seed", type=int)
-    parser.add_argument("--num_iter", type=int)
-    parser.add_argument("--delta", type=float)
-    parser.add_argument("--radius", type=float)
+    parser.add_argument("--num_init", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--num_iter", type=int, default=10)
+    parser.add_argument("--delta", type=float, default=0)
+    parser.add_argument("--radius", type=float, default=.1)
 
     args = vars(parser.parse_args())
     num_init = args['num_init']
