@@ -36,6 +36,7 @@ def get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,mo
     # print(record_dict['obs_list'][20])
     else:
         print("skipping experiment because you said so -- i assume you already ran it and are resuming or something?")
+        record_dict = None
 
     # score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
 
@@ -64,18 +65,19 @@ def system_agent(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,move_gr
 def fail_bo(
         num_iter,bounds,X,Y,
         constraints,dataset_path,ckpt_path,dim,y_dim,punchout_radius,
-        record_dicts, resume, lambda_, run_suffix):
+        record_dicts, resume, lambda_, run_suffix, move_gripper_first):
 
     if resume:
 
         print(X, X.shape) 
         print(Y, Y.size())
+        print(X.shape, Y.size())
 
         manually_append = input("do you want to manually append anything to Y? (y/[n]) : ")
         if manually_append == 'y':
-            mys = torch.zeros((1,3))
+            mys = torch.zeros((1,y_dim))
             costs = [float(c) for c in input('enter costs: ').split(',')]
-            for i in range(3):
+            for i in range(y_dim):
                 mys[0,i] = costs[i]
             Y = torch.cat((Y, mys))
             record_dicts = record_dicts + [[]]
@@ -86,6 +88,7 @@ def fail_bo(
 
     print(X, X.shape) 
     print(Y, Y.size())
+    print(X.shape, Y.size())
     input("review X and Y above")
 
     if resume:
@@ -93,7 +96,7 @@ def fail_bo(
     else:
         id_ =0 
     
-    first_run = True
+    first_run = move_gripper_first
 
     while id_ < num_iter:
         # We don't have to normalize X since the domain is [0, 1]^2. Make sure to
@@ -120,7 +123,8 @@ def fail_bo(
             raw_samples=512,
         )
         next_X = next_X[0]
-        print(f"Iteration: {id_+1}/{num_iter}, Datapoint selected: {next_X}")
+
+        print(f"\n\nIteration: {id_+1}/{num_iter},\n -> Datapoint selected: {next_X}\n")
         skip_str = input("press enter to proceed :) (or enter 'skip' without quotes to skip experiment)")
         skip_iter = (skip_str == 'skip')
 
@@ -180,6 +184,7 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
 
     print(prev_X, prev_X.shape) 
     print(prev_Y, prev_Y.size())
+    print(prev_X.shape, prev_Y.size())
 
     manually_append = input("do you want to manually append anything to prev? (y/n) : ")
     if manually_append == 'y':
@@ -193,6 +198,7 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
 
     print(prev_X, prev_X.shape) 
     print(prev_Y, prev_Y.size())
+    print(prev_X.shape, prev_Y.size())
     input("review prev_X and prev_Y above")
         
     X = np.empty((0,2))
@@ -250,6 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-suffix", type=str, default="_c2c3_only")
 
     parser.add_argument("--print-all-init", action='store_true', default=False)
+    parser.add_argument("--move-gripper-first", action='store_true', default=False)
 
     args = vars(parser.parse_args())
     num_init = args['num_init']
@@ -327,6 +334,5 @@ if __name__ == "__main__":
         X, y_data = fail_bo( 
             num_iter,bounds,X,y,
             constraints,dataset_path0,ckpt_path0,dim,y_dim,punchout_radius, 
-            record_dicts, args['resume'], args['lambda'],args['run_suffix'])
-    
+            record_dicts, args['resume'], args['lambda'],args['run_suffix'],args['move_gripper_first'])
     
