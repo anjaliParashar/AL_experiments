@@ -252,7 +252,7 @@ if __name__ == "__main__":
     # parser.add_argument("--delta", type=float, default=0.05)
     # parser.add_argument("--radius", type=float, default=0.05)
     parser.add_argument("--resume",  action='store_true', default=False)
-    parser.add_argument("--lambda", type=float, default=0)
+    parser.add_argument("--lambda", type=float, default=0.5)
     parser.add_argument("--run-suffix", type=str, default="_c2c3_only")
 
     parser.add_argument("--print-all-init", action='store_true', default=False)
