@@ -187,6 +187,9 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume,move_gripp
     # print(prev_X.shape, prev_Y.size())
 
     if resume:
+        print(prev_X, prev_X.shape) 
+        print(prev_Y, prev_Y.size())
+        print(prev_X.shape, prev_Y.size())
         manually_append = input("do you want to manually append anything to prev? (y/[n]) : ")
         if manually_append == 'y':
             mys = torch.zeros((1,y_dim))
