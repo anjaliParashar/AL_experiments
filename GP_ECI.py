@@ -33,12 +33,12 @@ def get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,mo
 
     if not skip_iter:
         record_dict = run_diffusion_policy(x0, y0, theta0, dataset_path, seed, max_steps=200, use_sim=False, move_gripper=move_gripper)
+        # record_dict = {} # testing
+
     # print(record_dict['obs_list'][20])
     else:
         print("skipping experiment because you said so -- i assume you already ran it and are resuming or something?")
         record_dict = None
-
-    # score_human = run_diffusion_policy(x0=x0,y0=y0,theta0=np.deg2rad(theta0),seed=seed,dataset_path=dataset_path,ckpt_path=ckpt_path)
 
     n_modes = y_dim
     while True:
@@ -264,15 +264,20 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=5000)
     parser.add_argument("--num_iter", type=int, default=20)
     # parser.add_argument("--delta", type=float, default=0.05)
-    # parser.add_argument("--radius", type=float, default=0.05)
-    parser.add_argument("--resume",  action='store_true', default=False)
+
     parser.add_argument("--lambda", type=float, default=1)
-    parser.add_argument("--run-suffix", type=str, default="_c2c3_only")
+    parser.add_argument("--radius", type=float, default=0.05)
+    parser.add_argument("--run-suffix", type=str, default="")
 
     parser.add_argument("--print-all-init", action='store_true', default=False)
+
+    parser.add_argument("--resume",  action='store_true', default=False)
     parser.add_argument("--move-gripper-first", action='store_true', default=False)
 
     parser.add_argument("--run-random", action='store_true', default=False)
+    parser.add_argument("--run-c2c3exp", action='store_true', default=False)
+
+    parser.add_argument("--run-with-c1", action='store_true', default=False)
 
     np.set_printoptions(precision=4)
 
@@ -284,14 +289,31 @@ if __name__ == "__main__":
 
     torch.manual_seed(seed)
     random.seed(seed)
+    # NOTE: does np need seed set? i think with the sequential add thing that might break something though for the init mode
+    # NOTE: does nything else need seed set? sometimes i get different next points when resuming the same ECI runs
 
     dataset_path0 = path.join(home_dir, 'models/data/pusht_bayesian_cpu.zarr')
     ckpt_path0 = path.join(home_dir, 'models/push_T_diffusion_model_anjali_cuda10.pt')
 
+    if args['run_c2c3exp']:
+        args['run_suffix'] = '_c2c3_only'
+    elif args['run_with_c1']:
+        args['run_suffix'] = '_with_c1'
+
+
     # mode='bo'
     # if mode=='initial':
     if args['run_random']:
-        get_initial(num_init,seed,dataset_path0,ckpt_path0,2,3,args["resume"],args['move_gripper_first'])
+        get_initial(
+            num_init,
+            seed,
+            dataset_path0,
+            ckpt_path0,
+            2,
+            3,
+            args["resume"],
+            args['move_gripper_first']
+        )
 
     else:
         
@@ -301,7 +323,37 @@ if __name__ == "__main__":
             X = data['X']
             y = data['y_data']
             record_dicts = data['record_dicts']
-        else:    
+
+        elif args['run_with_c1']:
+            # need to harcode the location and slice for now...
+            with open(f"seed_3000_0.5_c2c3_only.pkl", 'rb') as f:
+                data = pickle.load(f)
+            init_block = 5
+            run_block = 11
+            start_after = init_block + run_block
+            X = data['X'][:start_after]
+            y = data['y_data'][:start_after]
+            record_dicts = data['record_dicts'][:start_after]
+
+            # hardcoded, see the sheet
+            y_c1 = torch.zeros((run_block,1),dtype=torch.float32)
+            y_c1[8,0] = 1.0
+            y_c1[10,0] = 1.0
+            with open(f"GP_BO_init_3000.pkl", 'rb') as f:
+                data_initial = pickle.load(f)
+            y_c1_init = data_initial['y_data'][0:10:2,:1]
+            y_c1 = torch.cat([y_c1_init, y_c1], dim=0)
+
+            y = torch.column_stack([y_c1, y])
+
+            if args['print_all_init']:
+                print(X)
+                print(y)
+                print(len(X), len(y))
+                input('press enter to continue')
+
+
+        else:
             #open the random data file
             # with open(f"GP_BO_init_{seed}.pkl", 'rb') as f:
             with open(f"GP_BO_init_3000.pkl", 'rb') as f:
@@ -315,13 +367,17 @@ if __name__ == "__main__":
             
             #Load initial data
             X = data_initial['X'][0:10:2]
-            # y = data_initial['y_data'][0:10:2]
-            y = data_initial['y_data'][0:10:2,1:] # c2c3exp
+
+            if args['run_c2c3exp']:
+                y = data_initial['y_data'][0:10:2,1:] # c2c3exp
+            else:
+                y = data_initial['y_data'][0:10:2]
+
+            record_dicts = data_initial['record_dicts'][0:10:2]
 
             # Convert to torch tensors
             X = torch.tensor(X, dtype=torch.float32)
             y = torch.tensor(y, dtype=torch.float32)
-            record_dicts = data_initial['record_dicts'][0:10:2]
 
         # Set the device and data type
         if torch.cuda.is_available():
@@ -331,9 +387,9 @@ if __name__ == "__main__":
             }
         else:
             tkwargs = {
-                    "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-                    "dtype": torch.double,
-                }
+                "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                "dtype": torch.double,
+           } # TODO: is there a reason why just this isn't sufficient?
 
         bounds = torch.tensor([[0, 0], [1, 1]], **tkwargs)
         lb, ub = bounds
@@ -342,18 +398,33 @@ if __name__ == "__main__":
         delta2 = 0.2
         delta3 = 0.3
         # delta = args['delta']
-        # constraints = [("gt", delta1),("gt", delta2),("gt", delta3)]
 
-        # c2c3exp
-        constraints = [("gt", delta2),("gt", delta3)]
+        if args['run_c2c3exp']:
+            constraints = [("gt", delta2),("gt", delta3)] # c2c3exp
+        else:
+            constraints = [("gt", delta1),("gt", delta2),("gt", delta3)]
 
-        punchout_radius =0.05# args['radius']
 
-        y_dim = 2 # c2c3exp
+        punchout_radius = args['radius']
+
+        y_dim = 2 if args['run_c2c3exp'] else 3 # c2c3exp
         
         #gp_models
         X, y_data = fail_bo( 
-            num_iter,bounds,X,y,
-            constraints,dataset_path0,ckpt_path0,dim,y_dim,punchout_radius, 
-            record_dicts, args['resume'], args['lambda'],args['run_suffix'],args['move_gripper_first'])
+            num_iter,
+            bounds,
+            X,
+            y,
+            constraints,
+            dataset_path0,
+            ckpt_path0,
+            dim,
+            y_dim,
+            punchout_radius, 
+            record_dicts, 
+            args['resume'], 
+            args['lambda'],
+            args['run_suffix'],
+            args['move_gripper_first']
+        )
     
