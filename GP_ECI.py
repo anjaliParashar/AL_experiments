@@ -165,7 +165,7 @@ def fail_bo(
 
     return X,Y#, model_list_gp
 
-def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
+def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume,move_gripper):
     data = {}
 
     if resume: 
@@ -182,19 +182,24 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
         prev_Y = torch.empty(size=(0,y_dim))
         prev_record_dicts = []
 
-    print(prev_X, prev_X.shape) 
-    print(prev_Y, prev_Y.size())
-    print(prev_X.shape, prev_Y.size())
+    # print(prev_X, prev_X.shape) 
+    # print(prev_Y, prev_Y.size())
+    # print(prev_X.shape, prev_Y.size())
 
-    manually_append = input("do you want to manually append anything to prev? (y/n) : ")
-    if manually_append == 'y':
-        mys = torch.zeros((1,y_dim))
-        costs = [float(c) for c in input('enter costs: ').split(',')]
-        for i in range(y_dim):
-            mys[0,i] = costs[i]
-        prev_Y = torch.cat((prev_Y, mys))
-        prev_X = data["X"]#[:prev_Y.size(dim=0),:]
-        prev_record_dicts = prev_record_dicts + [[]]
+    if resume:
+        manually_append = input("do you want to manually append anything to prev? (y/[n]) : ")
+        if manually_append == 'y':
+            mys = torch.zeros((1,y_dim))
+            costs = [float(c) for c in input('enter costs: ').split(',')]
+            for i in range(y_dim):
+                mys[0,i] = costs[i]
+            prev_Y = torch.cat((prev_Y, mys))
+            prev_X = data["X"]#[:prev_Y.size(dim=0),:]
+            prev_record_dicts = prev_record_dicts + [[]]
+
+        manually_remove = input("do you want to remove last X? (y/[n]) : ")
+        if manually_remove == 'y':
+            prev_X = prev_X[:-1,:]
 
     print(prev_X, prev_X.shape) 
     print(prev_Y, prev_Y.size())
@@ -207,9 +212,12 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
     for n in range(prev_Y.size(dim=0),num_init):
         
         x = np.random.rand(1,2)
-        print(x, x.shape)
-        print(X, X.shape)
-        print(f"this is run {n+1}/{num_init}, x = {x}")
+        # print(x, x.shape)
+        # print(X, X.shape)
+        print(f"\n\nthis is run {n+1}/{num_init},\n -> x = {x}\n\n")
+        skip_str = input("press enter to proceed :) (or enter 'skip' without quotes to skip experiment) : ")
+        skip_iter = (skip_str == 'skip')
+
         X = np.vstack((X, x))
 
         data = {
@@ -223,7 +231,7 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
         next_ys = torch.zeros(size=(1,y_dim))
 
         next_ys,record_dict= \
-            system_agent(x.squeeze(),dim,y_dim,seed,dataset_path,ckpt_path)
+            system_agent(x.squeeze(),dim,y_dim,seed,dataset_path,ckpt_path,skip_iter,move_gripper)
         # next_y = torch.tensor([next_y1,next_y2,next_y3]).reshape(1,3)
         Y = torch.cat((Y, next_ys))   
         record_dicts.append(record_dict)
@@ -235,19 +243,22 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume):
             'record_dicts': prev_record_dicts+record_dicts
         }
         # print(data)
-        print(data["X"])
-        print(data["y_data"])
+        print(data["X"], data['X'].shape)
+        print(data["y_data"], data['y_data'].size())
+        print(data['X'].shape, data['y_data'].size())
         # exit()
 
         with open(f"GP_BO_init_{seed}.pkl", "wb") as f:
             pickle.dump(data, f)
+
+
     
 if __name__ == "__main__":
     # seed_list = [3000,5000,10000,15000,20000,25000,30000,35000,40000,45000]
     acf = "ECI"
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_init", type=int, default=5)
-    parser.add_argument("--seed", type=int, default=10000)
+    parser.add_argument("--num_init", type=int, default=20)
+    parser.add_argument("--seed", type=int, default=5000)
     parser.add_argument("--num_iter", type=int, default=20)
     # parser.add_argument("--delta", type=float, default=0.05)
     # parser.add_argument("--radius", type=float, default=0.05)
@@ -257,6 +268,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--print-all-init", action='store_true', default=False)
     parser.add_argument("--move-gripper-first", action='store_true', default=False)
+
+    parser.add_argument("--run-random", action='store_true', default=False)
+
+    np.set_printoptions(precision=4)
+
 
     args = vars(parser.parse_args())
     num_init = args['num_init']
@@ -269,9 +285,11 @@ if __name__ == "__main__":
     dataset_path0 = path.join(home_dir, 'models/data/pusht_bayesian_cpu.zarr')
     ckpt_path0 = path.join(home_dir, 'models/push_T_diffusion_model_anjali_cuda10.pt')
 
-    mode='bo'
-    if mode=='initial':
-        get_initial(num_init,seed,dataset_path0,ckpt_path0,2,args["resume"])
+    # mode='bo'
+    # if mode=='initial':
+    if args['run_random']:
+        get_initial(num_init,seed,dataset_path0,ckpt_path0,2,3,args["resume"],args['move_gripper_first'])
+
     else:
         
         if args['resume']:
