@@ -35,7 +35,6 @@ def get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,mo
         record_dict = run_diffusion_policy(x0, y0, theta0, dataset_path, seed, max_steps=200, use_sim=False, move_gripper=move_gripper)
         # record_dict = {} # testing
 
-    # print(record_dict['obs_list'][20])
     else:
         print("skipping experiment because you said so -- i assume you already ran it and are resuming or something?")
         record_dict = None
@@ -53,14 +52,7 @@ def get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,mo
     return score_human, record_dict
 
 def system_agent(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter=False,move_gripper=False):
-
-    scores,record_dict = get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter,move_gripper)
-    # if score<0.7:
-    #     return torch.tensor(1)
-    # else:1,score2,score3
-    #     return torch.tensor(1-score)
-    # return torch.tensor(score1),torch.tensor(score2),torch.tensor(score3)
-    return scores,record_dict
+    return get_user_feedback(X,dim,y_dim,seed,dataset_path,ckpt_path,skip_iter,move_gripper)
 
 def fail_bo(
         num_iter,bounds,X,Y,
@@ -102,8 +94,10 @@ def fail_bo(
         # We don't have to normalize X since the domain is [0, 1]^2. Make sure to
         # appropriately adjust the punchout radius if the domain is normalized.
 
-        gp_models = [get_and_fit_gp(X.float(),  Y[:, i : i + 1].reshape(-1,1)) for i in range(Y.shape[-1])]
-        # model_list_gp = ModelListGP(gp_models[0],gp_models[1],gp_models[2])
+        gp_models = [
+            get_and_fit_gp(X.float(),  Y[:, i : i + 1].reshape(-1,1)) 
+            for i in range(Y.shape[-1])
+        ]
         model_list_gp = ModelListGP(*gp_models)
 
         eci = ExpectedCoverageImprovement(
@@ -134,8 +128,6 @@ def fail_bo(
         with open(f"seed_{seed}_{lambda_}{run_suffix}.pkl", "wb") as f:
             pickle.dump(data,f)
 
-        # next_y1,next_y2,next_y3,record_dict= system_agent(next_X.squeeze(),dim,seed,dataset_path,ckpt_path,skip_iter)
-        # next_y = torch.tensor([next_y1,next_y2,next_y3]).reshape(1,3)
         next_ys,record_dict= system_agent(next_X.squeeze(),dim,y_dim,seed,dataset_path,ckpt_path,skip_iter,first_run)
         first_run = False
 
@@ -172,13 +164,10 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume,move_gripp
         with open(f"GP_BO_init_{seed}.pkl", "rb") as f:
             data = pickle.load(f)
         prev_Y = data["y_data"][1:,:]
-        # print(prev_Y.size(dim=0))
-        # input("asdf")
         prev_X = data["X"] #[:prev_Y.size(dim=0)+1,:]
         prev_record_dicts = data["record_dicts"]
     else:
         prev_X = np.empty(shape=(0,2))
-        # prev_Y = torch.empty(size=(0,3))
         prev_Y = torch.empty(size=(0,y_dim))
         prev_record_dicts = []
 
@@ -235,7 +224,7 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume,move_gripp
 
         next_ys,record_dict= \
             system_agent(x.squeeze(),dim,y_dim,seed,dataset_path,ckpt_path,skip_iter,move_gripper)
-        # next_y = torch.tensor([next_y1,next_y2,next_y3]).reshape(1,3)
+
         Y = torch.cat((Y, next_ys))   
         record_dicts.append(record_dict)
 
@@ -245,11 +234,10 @@ def get_initial(num_init,seed,dataset_path,ckpt_path,dim,y_dim,resume,move_gripp
             'y_data': torch.cat((prev_Y,Y)), 
             'record_dicts': prev_record_dicts+record_dicts
         }
-        # print(data)
+
         print(data["X"], data['X'].shape)
         print(data["y_data"], data['y_data'].size())
         print(data['X'].shape, data['y_data'].size())
-        # exit()
 
         with open(f"GP_BO_init_{seed}.pkl", "wb") as f:
             pickle.dump(data, f)
@@ -301,9 +289,8 @@ if __name__ == "__main__":
         args['run_suffix'] = '_with_c1'
 
 
-    # mode='bo'
-    # if mode=='initial':
     if args['run_random']:
+
         get_initial(
             num_init,
             seed,
@@ -326,6 +313,7 @@ if __name__ == "__main__":
 
         elif args['run_with_c1']:
             # need to harcode the location and slice for now...
+            # basically we're starting after the second occurrence of straight failure in this set of trials
             with open(f"seed_3000_0.5_c2c3_only.pkl", 'rb') as f:
                 data = pickle.load(f)
             init_block = 5
@@ -335,7 +323,7 @@ if __name__ == "__main__":
             y = data['y_data'][:start_after]
             record_dicts = data['record_dicts'][:start_after]
 
-            # hardcoded, see the sheet
+            # also hardcoded, see the sheet
             y_c1 = torch.zeros((run_block,1),dtype=torch.float32)
             y_c1[8,0] = 1.0
             y_c1[10,0] = 1.0
@@ -354,8 +342,7 @@ if __name__ == "__main__":
 
 
         else:
-            #open the random data file
-            # with open(f"GP_BO_init_{seed}.pkl", 'rb') as f:
+            #open the random data file, seed hardcoded to 3000
             with open(f"GP_BO_init_3000.pkl", 'rb') as f:
                 data_initial = pickle.load(f)
 
