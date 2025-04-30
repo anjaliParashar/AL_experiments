@@ -249,11 +249,11 @@ if __name__ == "__main__":
     acf = "ECI"
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_init", type=int, default=20)
-    parser.add_argument("--seed", type=int, default=5000)
+    parser.add_argument("--seed", type=int, default=3000)
     parser.add_argument("--num_iter", type=int, default=20)
     # parser.add_argument("--delta", type=float, default=0.05)
 
-    parser.add_argument("--lambda", type=float, default=1)
+    parser.add_argument("--lambda", type=float, default=0)
     parser.add_argument("--radius", type=float, default=0.05)
     parser.add_argument("--run-suffix", type=str, default="")
 
