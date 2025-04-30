@@ -253,7 +253,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_iter", type=int, default=20)
     # parser.add_argument("--delta", type=float, default=0.05)
 
-    parser.add_argument("--lambda", type=float, default=0)
+    parser.add_argument("--lambda", type=float, default=0.5)
     parser.add_argument("--radius", type=float, default=0.05)
     parser.add_argument("--run-suffix", type=str, default="")
 
