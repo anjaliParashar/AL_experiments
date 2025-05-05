@@ -267,6 +267,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--run-with-c1", action='store_true', default=False)
 
+    parser.add_argument("--run-single-point", action='store_true', default=False)
+
     np.set_printoptions(precision=4)
 
 
@@ -288,8 +290,19 @@ if __name__ == "__main__":
     elif args['run_with_c1']:
         args['run_suffix'] = '_with_c1'
 
+    if args['run_single_point']:
+        input_str = input(f"please enter desired X value (normalized) : ")
+        X = [float(x) for x in input_str.split(',')]
+        Y, record_dict = get_user_feedback(X,2,3,seed,None,None,skip_iter=False,move_gripper=args['move_gripper_first'])
+        data = {
+            'X': X,
+            'Y': Y,
+            'record_dict': record_dict
+        }
+        with open(f"single_point_{X[0]}_{Y[0]}{args['run_suffix']}.pkl", "wb") as f:
+            pickle.dump(data, f)
 
-    if args['run_random']:
+    elif args['run_random']:
 
         get_initial(
             num_init,

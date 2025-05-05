@@ -1,0 +1,5 @@
+X values for example of each failure mode:
+
+1: (1,1)
+2: (0,0)
+3: ()
