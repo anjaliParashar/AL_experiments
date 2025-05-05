@@ -3,4 +3,7 @@ X values for example of each failure mode:
 
 mode 1: (1, 1)
 mode 2: (0, 0)
-mode 3: (0.1937, 0) ?
+mode 3: see below...
+
+-> (0.1937, 0) had some mode 2 interspersed
+-> (0.3270, 0.0530) had a mode 2 kill near very end? but otherwise was more pure 3
