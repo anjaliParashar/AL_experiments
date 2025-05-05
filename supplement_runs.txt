@@ -1,10 +1,13 @@
 X values for example of each failure mode:
 
 
-mode 1: (1, 1)
-mode 2: (0, 0)
+mode 1: [row 42] (1, 1)
+mode 2: [row 63] (0, 0)
 mode 3: see below...
 
--> (0.1937, 0) had some mode 2 interspersed
--> (0.3270, 0.0530) had a mode 2 kill near very end? but otherwise was more pure 3
--> (0.3305, 0.1569) had what i think was not a mode 2 kill near the end
+-> [row 106] (0.1937, 0) had some mode 2 interspersed
+-> [row 154] (0.3270, 0.0530) had a mode 2 kill near very end? but otherwise was more pure 3
+-> [row 228] (0.3305, 0.1569) had what i think was not a mode 2 kill near the end
+
+note: the experiments aren't exactly all that repeatable so it probably differs at least a bit from what was recorded in the sheet. but these correspond to videos taken
+(also i recorded the mode 1 thing but didn't add the pkl save at that point oop)
