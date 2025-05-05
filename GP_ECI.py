@@ -299,7 +299,7 @@ if __name__ == "__main__":
             'Y': Y,
             'record_dict': record_dict
         }
-        with open(f"single_point_{X[0]}_{Y[0]}{args['run_suffix']}.pkl", "wb") as f:
+        with open(f"single_point_{X[0]}_{X[1]}{args['run_suffix']}.pkl", "wb") as f:
             pickle.dump(data, f)
 
     elif args['run_random']:
