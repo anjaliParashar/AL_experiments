@@ -1,5 +1,10 @@
 X values for example of each failure mode:
 
+<<<<<<< HEAD
 1: (1,1)
 2: (0,0)
+=======
+1: ()
+2: ()
+>>>>>>> 1f12a70ac66ed53b363084760084613dc109347b
 3: ()
