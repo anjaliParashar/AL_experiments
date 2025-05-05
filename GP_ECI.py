@@ -267,6 +267,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--run-with-c1", action='store_true', default=False)
 
+    parser.add_argument("--run-single-point", action='store_true', default=False)
+
     np.set_printoptions(precision=4)
 
 
@@ -288,8 +290,12 @@ if __name__ == "__main__":
     elif args['run_with_c1']:
         args['run_suffix'] = '_with_c1'
 
+    if args['run_single_point']:
+        input_str = input(f"please enter desired X value (normalized) : ")
+        X = input_str.split(',')
+        get_user_feedback(X,2,3,seed,None,None,skip_iter=False,move_gripper=args['move_gripper_first'])
 
-    if args['run_random']:
+    elif args['run_random']:
 
         get_initial(
             num_init,
