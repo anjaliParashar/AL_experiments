@@ -7,3 +7,4 @@ mode 3: see below...
 
 -> (0.1937, 0) had some mode 2 interspersed
 -> (0.3270, 0.0530) had a mode 2 kill near very end? but otherwise was more pure 3
+-> (0.3305, 0.1569) had what i think was not a mode 2 kill near the end
