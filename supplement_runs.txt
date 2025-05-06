@@ -11,3 +11,10 @@ mode 3: see below...
 
 note: the experiments aren't exactly all that repeatable so it probably differs at least a bit from what was recorded in the sheet. but these correspond to videos taken
 (also i recorded the mode 1 thing but didn't add the pkl save at that point oop)
+
+
+rearragned:
+
+1: seed 5000 1 c2c3 mode 1
+2: seed 5000 1 c2c3 mode 2
+3: seed 3000 1 mode 3 
